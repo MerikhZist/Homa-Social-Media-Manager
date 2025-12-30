@@ -1,0 +1,810 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+  <title>Homa — Social Media Manager & App Blocker</title>
+  <style>
+    :root{
+      --bg:#f4f7f5;
+      --sage:#89a88f;
+      --sage-700:#6e8f78;
+      --sage-900:#4b6b57;
+      --accent:#3a5f49;
+      --text:#1f2a24;
+      --muted:#6b7b72;
+      --card:#ffffff;
+      --border:#d9e2db;
+      --good:#5fb37c;
+      --warn:#d7a646;
+      --bad:#c45353;
+      --shadow:0 6px 16px rgba(48,66,56,0.12);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans";
+      background: linear-gradient(180deg, #f6faf7, var(--bg));
+      color:var(--text);
+    }
+    .app{
+      max-width: 560px;
+      margin: 0 auto;
+      padding-bottom: env(safe-area-inset-bottom);
+      display:flex;
+      flex-direction:column;
+      min-height:100vh;
+    }
+    header{
+      position:sticky; top:0; z-index:10;
+      background: linear-gradient(180deg, #eaf3ee, #f6faf7);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: saturate(1.1) blur(6px);
+    }
+    .topbar{display:flex; align-items:center; justify-content:space-between; padding: 12px 16px;}
+    .brand{display:flex; align-items:center; gap:10px; font-weight:800; color:var(--sage-900)}
+    .logo{width:30px; height:30px; border-radius:9px; background: conic-gradient(from 180deg, #89a88f, #b6c9b9, #89a88f)}
+    .tabs{display:flex; gap:8px}
+    .tab{appearance:none; border:none; background:transparent; color:var(--sage-900); padding:8px 12px; border-radius:10px; font-weight:700}
+    .tab[aria-selected="true"]{background:#e2ede6; color:var(--accent); box-shadow: inset 0 0 0 1px var(--border)}
+    .tab:focus-visible{outline:2px solid #2b7a78; outline-offset:2px}
+    main{flex:1; padding: 16px; display:flex; flex-direction:column; gap:16px;}
+    .card{background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:14px;}
+    .section-title{display:flex; align-items:center; gap:10px; margin-bottom:10px; color:var(--sage-900); font-weight:800}
+    .muted{color:var(--muted)}
+
+    /* Progress */
+    .progress-wrap{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:8px;}
+    .progress-stats{display:flex; flex-direction:column; gap:2px}
+    .progress-stats .big{font-size:22px; font-weight:900; color:var(--accent)}
+    .progress-bar{position:relative; width:100%; height:14px; border-radius:999px; background:#e7efe9; overflow:hidden; border:1px solid var(--border)}
+    .progress-fill{position:absolute; inset:0; width:0%; background: linear-gradient(90deg, #89a88f, #6e8f78)}
+    .progress-fill.good{background:linear-gradient(90deg,var(--good),#72c08b)}
+    .progress-fill.warn{background:linear-gradient(90deg,var(--warn),#e7c05f)}
+    .progress-fill.bad{background:linear-gradient(90deg,var(--bad),#d66a6a)}
+    .progress-label{display:flex; justify-content:space-between; margin-top:6px; font-size:12px; color:var(--muted)}
+
+    /* Apps grid */
+    .apps-grid{display:grid; grid-template-columns: repeat(3,1fr); gap:10px}
+    .app-btn{appearance:none; border:1px solid var(--border); background:#eef5f0; color:var(--text); border-radius:14px; padding:12px; display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; font-weight:700}
+    .app-btn[aria-pressed="true"]{background:#dfeae3; border-color:#cbd9cf; box-shadow: inset 0 0 0 1px #c1d0c5}
+    .app-icon{width:32px; height:32px; border-radius:8px; display:grid; place-items:center; color:#fff; font-size:18px; font-weight:900}
+    .app-label{font-size:13px; color:var(--sage-900)}
+    .ig{background:#E1306C} .tt{background:#000000}
+    .tw{background:#1DA1F2} .fb{background:#1877F2}
+    .sc{background:#FFFC00; color:#000} .yt{background:#FF0000}
+
+    /* Active session */
+    .session{display:flex; align-items:center; justify-content:space-between; gap:10px; background:#eef5f0; border:1px dashed #cbd9cf; border-radius:12px; padding:10px}
+    .session .left{display:flex; align-items:center; gap:10px}
+    .session .status{width:10px; height:10px; border-radius:999px; background:#5fb37c; box-shadow:0 0 0 4px #d8f1e1}
+    .session .name{font-weight:800; color:var(--accent)}
+    .session-time{font-variant-numeric: tabular-nums}
+    .breath-link{appearance:none; border:none; background:#dfeae3; color:var(--accent); padding:8px 10px; border-radius:10px; font-weight:800}
+
+    /* History */
+    .history{display:flex; flex-direction:column; gap:8px}
+    .history-item{display:flex; align-items:center; justify-content:space-between; gap:10px; border:1px solid var(--border); border-radius:10px; padding:10px}
+    .history-item .left{display:flex; align-items:center; gap:10px}
+    .chip{padding:4px 8px; border-radius:999px; background:#eef5f0; color:var(--sage-900); font-size:12px; border:1px solid var(--border)}
+
+    /* Settings */
+    .goal-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+    .goal-chip{appearance:none; border:1px solid var(--border); background:#eef5f0; color:var(--text); padding:8px 10px; border-radius:999px; font-weight:800}
+    .goal-chip[aria-pressed="true"]{background:#dfeae3; border-color:#cbd9cf; color:var(--accent)}
+    .input-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    .input{flex:1; min-width:140px; background:#fff; border:1px solid var(--border); border-radius:10px; padding:10px; font-size:16px}
+    .toggle{display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none}
+    .switch{width:44px; height:24px; background:#dfeae3; border:1px solid var(--border); border-radius:999px; position:relative}
+    .knob{position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:999px; background:#fff; box-shadow: var(--shadow); transition: transform 200ms ease}
+    .switch.on{background:#b9d0c1}
+    .switch.on .knob{transform: translateX(20px)}
+    .save-btn{appearance:none; border:none; background:var(--sage-700); color:#fff; font-weight:800; padding:10px 12px; border-radius:12px; box-shadow: var(--shadow)}
+
+    /* Breathing */
+    .circle-wrap{display:grid; place-items:center; padding:16px}
+    .circle{width:220px; height:220px; border-radius:999px; position:relative; background: radial-gradient(circle at 50% 50%, #eef5f0 35%, #dfeae3 100%); box-shadow: inset 0 0 40px rgba(48,66,56,0.18), 0 8px 22px rgba(48,66,56,0.18)}
+    .circle.animate{animation: breathe 12s infinite}
+    @keyframes breathe{
+      0%{transform:scale(1)}
+      33%{transform:scale(1.12)} /* inhale */
+      66%{transform:scale(1.12)} /* hold */
+      100%{transform:scale(1)}   /* exhale */
+    }
+    .cue{text-align:center; font-weight:900; color:var(--sage-900); margin-top:10px}
+    .subcue{text-align:center; color:var(--muted)}
+    .btn{appearance:none; border:1px solid var(--border); background:#eef5f0; color:var(--accent); padding:8px 12px; border-radius:12px; font-weight:800}
+    .btn.primary{background:var(--sage-700); color:#fff; border:none}
+
+    /* Modal */
+    .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background: rgba(32, 44, 38, 0.6); backdrop-filter: blur(6px); z-index:100}
+    .modal.active{display:flex}
+    .modal-card{width:100%; max-width:520px; margin:16px; border-radius:20px; border:1px solid var(--border); background: linear-gradient(180deg, #eaf3ee, #f6faf7); box-shadow: 0 20px 44px rgba(48,66,56,0.28); padding: 18px}
+    .modal-header{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px}
+    .modal-title{font-size:18px; font-weight:900; color:var(--accent)}
+    .close{appearance:none; border:1px solid var(--border); background:#e7efe9; border-radius:10px; padding:6px 10px; font-weight:800; color:var(--accent)}
+
+    /* Blocker banners */
+    .blocker-banner{display:flex; align-items:center; gap:10px; padding:10px; border-radius:12px; border:1px solid var(--border)}
+    .soft{background:#fff6e6; border-color:#f1d49a}
+    .hard{background:#ffe6e6; border-color:#e4a8a8}
+
+    /* Toast */
+    .toast{position:fixed; left:50%; transform:translateX(-50%); bottom: max(16px, env(safe-area-inset-bottom)); background:#2d473a; color:#e8f2ec; border-radius:999px; padding:10px 14px; font-weight:800; box-shadow: var(--shadow); display:none; z-index:999}
+    .toast.show{display:block}
+
+    /* How it works + Algorithm */
+    .steps{display:flex; flex-direction:column; gap:8px}
+    .step{display:flex; gap:8px; align-items:flex-start; background:#eef5f0; border:1px solid var(--border); padding:8px 10px; border-radius:12px}
+    .num{min-width:22px; height:22px; border-radius:999px; display:grid; place-items:center; background:#dfeae3; color:var(--accent); font-weight:800; font-size:12px}
+
+    @media (prefers-reduced-motion: reduce){
+      .circle.animate{animation:none}
+      .knob{transition:none}
+    }
+    @media (max-width:360px){
+      .apps-grid{grid-template-columns: repeat(2, 1fr)}
+      .circle{width:200px; height:200px}
+    }
+    @media (max-width:320px){
+      .apps-grid{grid-template-columns: 1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="topbar" role="navigation" aria-label="Primary">
+        <div class="brand">
+          <div class="logo" aria-hidden="true"></div>
+          <div>Homa</div>
+        </div>
+        <div class="tabs" role="tablist" aria-label="Sections">
+          <button class="tab" role="tab" aria-selected="true" aria-controls="home" id="tab-home">Home</button>
+          <button class="tab" role="tab" aria-selected="false" aria-controls="settings" id="tab-settings">Settings</button>
+          <button class="tab" role="tab" aria-selected="false" aria-controls="breathing" id="tab-breathing">Breathing</button>
+          <button class="tab" role="tab" aria-selected="false" aria-controls="blocker" id="tab-blocker">Blocker</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- Home -->
+      <section id="home" role="tabpanel" aria-labelledby="tab-home" class="card">
+        <div class="section-title"><span>🏠 Home dashboard</span></div>
+
+        <div class="progress-wrap">
+          <div class="progress-stats">
+            <div class="big" id="todayUsage">0m</div>
+            <div class="muted">Today vs goal (<span id="goalText">120m</span>)</div>
+          </div>
+          <button class="breath-link" id="openBreathing">🌿 Breathing</button>
+        </div>
+
+        <div class="progress-bar" aria-label="Daily progress">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-label">
+          <span id="progressPercent">0%</</span>
+          <span id="progressStatus" class="muted">Calm and mindful</span>
+        </div>
+
+        <div class="section-title" style="margin-top:12px"><span>⚡ Quick-track</span></div>
+        <div class="apps-grid" id="appsGrid" aria-label="Social app trackers"></div>
+
+        <div id="activeSession" class="session" style="display:none; margin-top:12px" aria-live="polite">
+          <div class="left">
+            <div class="status" aria-hidden="true"></div>
+            <div>
+              <div class="name" id="sessionName">Active session</div>
+              <div class="muted session-time"><span id="sessionClock">00:00</span> — tap the app again to end</div>
+            </div>
+          </div>
+          <button class="breath-link" id="inlineBreathing">🌿</button>
+        </div>
+
+        <div id="softBanner" class="blocker-banner soft" style="display:none; margin-top:12px">
+          <strong>Soft block:</strong> Take a 1 minute breathing break.
+          <button class="btn" id="softStart">Start</button>
+        </div>
+
+        <div id="hardBanner" class="blocker-banner hard" style="display:none; margin-top:12px">
+          <strong>Hard block:</strong> Cooldown in progress. <span id="cooldownText"></span>
+        </div>
+
+        <div class="section-title" style="margin-top:12px"><span>🕘 Recent sessions</span></div>
+        <div id="history" class="history" aria-label="Recent sessions"></div>
+      </section>
+
+      <!-- Settings -->
+      <section id="settings" role="tabpanel" aria-labelledby="tab-settings" class="card" hidden>
+        <div class="section-title"><span>⚙️ Settings</span></div>
+        <div class="muted" style="margin-bottom:6px">Customizable daily goal (default 2 hours)</div>
+        <div class="goal-row" id="presetRow" aria-label="Preset goals"></div>
+
+        <div class="input-row" style="margin:8px 0">
+          <label class="toggle" for="customGoal"><span class="muted">Custom minutes</span></label>
+          <input id="customGoal" class="input" type="number" min="15" step="15" placeholder="e.g., 120" inputmode="numeric" />
+          <button class="save-btn" id="saveGoal">Save goal</button>
+        </div>
+
+        <div class="input-row" style="margin-top:6px">
+          <label class="toggle" id="notifToggle" for="notifSwitch">
+            <div class="switch" id="notifSwitch" role="switch" aria-checked="true" tabindex="0"><div class="knob"></div></div>
+            <span class="muted">Gentle reminders</span>
+          </label>
+        </div>
+
+        <div class="muted" style="margin-top:10px">
+          Preset goals: 60, 90, 120, 150, 180 minutes. Get gentle reminders as you approach your limit.
+        </div>
+      </section>
+
+      <!-- Breathing -->
+      <section id="breathing" role="tabpanel" aria-labelledby="tab-breathing" class="card" hidden>
+        <div class="section-title"><span>🌿 Breathing exercise</span></div>
+        <div class="muted">Animated 4–4–4 cycle: inhale 4s, hold 4s, exhale 4s.</div>
+        <div class="input-row" style="margin-top:10px">
+          <button class="save-btn" id="openBreathing2">Open full-screen</button>
+          <button class="btn" id="startInlineBreathing">Start inline</button>
+          <button class="btn" id="stopInlineBreathing" disabled>Stop</button>
+        </div>
+        <div class="circle-wrap">
+          <div class="circle" id="inlineCircle" aria-label="Breathing circle"></div>
+          <div class="cue" id="inlineCue">Inhale</div>
+          <div class="subcue">4 seconds each phase</div>
+        </div>
+      </section>
+
+      <!-- Blocker -->
+      <section id="blocker" role="tabpanel" aria-labelledby="tab-blocker" class="card" hidden>
+        <div class="section-title"><span>🚫 App Blocker</span></div>
+
+        <div class="steps" style="margin-bottom:10px">
+          <div class="step"><div class="num">1</div><div><strong>Initialization:</strong> Threshold 2 hours/day, initialize AI tracking, setup preferences DB.</div></div>
+          <div class="step"><div class="num">2</div><div><strong>Monitoring:</strong> Track time, duration, interactions; log scrolling speed and engagement; find peaks.</div></div>
+          <div class="step"><div class="num">3</div><div><strong>AI analysis:</strong> Model trends, detect anomalies, personalize with history.</div></div>
+          <div class="step"><div class="num">4</div><div><strong>Restriction:</strong> Notifications, soft block (break prompt), hard block (cooldown).</div></div>
+          <div class="step"><div class="num">5</div><div><strong>Adaptive:</strong> User feedback tunes intensity; thresholds adjust.</div></div>
+          <div class="step"><div class="num">6</div><div><strong>Override:</strong> Valid exceptions with verification; log overrides.</div></div>
+        </div>
+
+        <div class="section-title" style="margin-top:6px"><span>🛡️ Controls</span></div>
+        <div class="input-row">
+          <button class="btn" id="triggerSoft">Trigger soft block</button>
+          <button class="btn" id="triggerHard">Trigger hard block (15 min)</button>
+          <button class="btn" id="requestOverride">Request override</button>
+        </div>
+
+        <div id="overrideModal" class="modal" aria-hidden="true" aria-label="Override request">
+          <div class="modal-card" role="dialog" aria-modal="true">
+            <div class="modal-header">
+              <div class="modal-title">Emergency override</div>
+              <button class="close" id="closeOverride">Close</button>
+            </div>
+            <div class="input-row">
+              <input id="overrideReason" class="input" type="text" placeholder="e.g., Work-related posting window" />
+              <button class="save-btn" id="submitOverride">Submit</button>
+            </div>
+            <div class="muted" style="margin-top:8px">Overrides are time-boxed and logged to improve accuracy.</div>
+          </div>
+        </div>
+
+        <div class="section-title" style="margin-top:10px"><span>💬 Feedback</span></div>
+        <div class="input-row">
+          <button class="btn" id="fbHelpful">👍 Helpful</button>
+          <button class="btn" id="fbNotHelpful">👎 Not helpful</button>
+        </div>
+      </section>
+
+      <!-- How it works -->
+      <section class="card" aria-label="How it works">
+        <div class="section-title"><span>📘 How it works</span></div>
+        <div class="steps">
+          <div class="step"><div class="num">1</div><div><strong>Tap:</strong> Tap an app icon to start tracking.</div></div>
+          <div class="step"><div class="num">2</div><div><strong>Use:</strong> Use your social media app.</div></div>
+          <div class="step"><div class="num">3</div><div><strong>End:</strong> Come back and tap the icon again to end the session.</div></div>
+          <div class="step"><div class="num">4</div><div><strong>Watch:</strong> See your daily progress update.</div></div>
+          <div class="step"><div class="num">5</div><div><strong>Reminders:</strong> Get gentle nudges as you approach your limit.</div></div>
+          <div class="step"><div class="num">6</div><div><strong>Breathe:</strong> Take breathing breaks when needed.</div></div>
+        </div>
+        <div class="muted" style="margin-top:8px">
+          The app uses manual and AI-assisted tracking to encourage mindful awareness of social media time.
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Breathing Modal -->
+  <div class="modal" id="breathModal" aria-hidden="true" aria-label="Breathing exercise modal">
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <div class="modal-title">🌿 Breathing exercise</div>
+        <button class="close" id="closeBreathing">Close</button>
+      </div>
+      <div class="circle-wrap">
+        <div class="circle" id="modalCircle" aria-label="Breathing circle"></div>
+        <div class="cue" id="modalCue">Inhale</div>
+        <div class="subcue muted">4 seconds inhale · 4 hold · 4 exhale</div>
+      </div>
+      <div class="input-row" style="justify-content:center">
+        <button class="btn primary" id="modalStart">Start</button>
+        <button class="btn" id="modalStop" disabled>Stop</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    // Local storage helpers
+    const store = {
+      get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch{ return d; } },
+      set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); } catch{} }
+    };
+
+    // Constants / keys
+    const APPS = [
+      {id:'instagram', label:'Instagram', short:'IG', color:'ig'},
+      {id:'tiktok', label:'TikTok', short:'TT', color:'tt'},
+      {id:'twitter', label:'Twitter', short:'TW', color:'tw'},
+      {id:'facebook', label:'Facebook', short:'FB', color:'fb'},
+      {id:'snapchat', label:'Snapchat', short:'SC', color:'sc'},
+      {id:'youtube', label:'YouTube', short:'YT', color:'yt'},
+    ];
+    const PRESETS = [60,90,120,150,180];
+    const K_GOAL = 'homa_goal';
+    const K_SESS = 'homa_sessions';
+    const K_ACTIVE = 'homa_active';
+    const K_NOTIF = 'homa_notif';
+    const K_MILE = 'homa_milestones';
+    const K_COOLDOWN = 'homa_cooldown';
+    const K_OVERRIDES = 'homa_overrides';
+    const todayKey = new Date().toISOString().slice(0,10);
+
+    // Elements
+    const tabs = {
+      home: document.getElementById('tab-home'),
+      settings: document.getElementById('tab-settings'),
+      breathing: document.getElementById('tab-breathing'),
+      blocker: document.getElementById('tab-blocker'),
+    };
+    const panels = {
+      home: document.getElementById('home'),
+      settings: document.getElementById('settings'),
+      breathing: document.getElementById('breathing'),
+      blocker: document.getElementById('blocker'),
+    };
+
+    const appsGrid = document.getElementById('appsGrid');
+    const activeSessionEl = document.getElementById('activeSession');
+    const sessionNameEl = document.getElementById('sessionName');
+    const sessionClockEl = document.getElementById('sessionClock');
+    const historyEl = document.getElementById('history');
+    const progressFill = document.getElementById('progressFill');
+    const todayUsageEl = document.getElementById('todayUsage');
+    const goalTextEl = document.getElementById('goalText');
+    const progressPercentEl = document.getElementById('progressPercent');
+    const progressStatusEl = document.getElementById('progressStatus');
+
+    const presetRow = document.getElementById('presetRow');
+    const customGoalInput = document.getElementById('customGoal');
+    const saveGoalBtn = document.getElementById('saveGoal');
+    const notifSwitch = document.getElementById('notifSwitch');
+    const notifToggle = document.getElementById('notifToggle');
+
+    const toast = document.getElementById('toast');
+
+    const breathModal = document.getElementById('breathModal');
+    const openBreathing = document.getElementById('openBreathing');
+    const openBreathing2 = document.getElementById('openBreathing2');
+    const closeBreathing = document.getElementById('closeBreathing');
+    const modalCircle = document.getElementById('modalCircle');
+    const inlineCircle = document.getElementById('inlineCircle');
+    const modalCue = document.getElementById('modalCue');
+    const inlineCue = document.getElementById('inlineCue');
+    const modalStart = document.getElementById('modalStart');
+    const modalStop = document.getElementById('modalStop');
+    const startInlineBreathingBtn = document.getElementById('startInlineBreathing');
+    const stopInlineBreathingBtn = document.getElementById('stopInlineBreathing');
+
+    const softBanner = document.getElementById('softBanner');
+    const hardBanner = document.getElementById('hardBanner');
+    const softStart = document.getElementById('softStart');
+    const cooldownText = document.getElementById('cooldownText');
+
+    const triggerSoftBtn = document.getElementById('triggerSoft');
+    const triggerHardBtn = document.getElementById('triggerHard');
+    const requestOverrideBtn = document.getElementById('requestOverride');
+    const overrideModal = document.getElementById('overrideModal');
+    const closeOverrideBtn = document.getElementById('closeOverride');
+    const submitOverrideBtn = document.getElementById('submitOverride');
+    const overrideReasonInput = document.getElementById('overrideReason');
+    const fbHelpful = document.getElementById('fbHelpful');
+    const fbNotHelpful = document.getElementById('fbNotHelpful');
+
+    // State
+    let goalMinutes = store.get(K_GOAL, 120);
+    let sessions = store.get(K_SESS, []);
+    let active = store.get(K_ACTIVE, null);
+    let notifEnabled = store.get(K_NOTIF, true);
+    let milestones = store.get(K_MILE, {'60':false,'75':false,'90':false,'100':false});
+    let cooldown = store.get(K_COOLDOWN, {active:false, endTs:0, minutes:0});
+    let overrides = store.get(K_OVERRIDES, []);
+    let sessionTimer = null;
+    let toastTimer = null;
+    let toastQueue = [];
+
+    // Build presets
+    function renderPresets(){
+      presetRow.innerHTML = '';
+      PRESETS.forEach(m=>{
+        const b = document.createElement('button');
+        b.className = 'goal-chip';
+        b.setAttribute('aria-pressed', String(m===goalMinutes));
+        b.textContent = `${m}m`;
+        b.addEventListener('click', ()=>{
+          setGoal(m);
+          showToast(`Daily goal set to ${m} minutes`);
+        });
+        presetRow.appendChild(b);
+      });
+      goalTextEl.textContent = `${goalMinutes}m`;
+    }
+
+    function setGoal(m){
+      goalMinutes = m;
+      store.set(K_GOAL, goalMinutes);
+      milestones = {'60':false,'75':false,'90':false,'100':false};
+      store.set(K_MILE, milestones);
+      renderPresets();
+      updateProgress();
+    }
+
+    // Build app buttons
+    function renderApps(){
+      appsGrid.innerHTML = '';
+      APPS.forEach(a=>{
+        const btn = document.createElement('button');
+        btn.className = 'app-btn';
+        btn.setAttribute('aria-pressed', active && active.app===a.id ? 'true' : 'false');
+        btn.setAttribute('aria-label', `Track ${a.label}`);
+        btn.innerHTML = `<div class="app-icon ${a.color}">${a.short}</div><div class="app-label">${a.label}</div>`;
+        btn.addEventListener('click', ()=> toggleSession(a));
+        appsGrid.appendChild(btn);
+      });
+    }
+
+    // Session toggle
+    function toggleSession(app){
+      if (isCooldownActive()){
+        showToast('Access restricted during cooldown.');
+        return;
+      }
+      if (active && active.app === app.id){
+        const ms = Date.now()-active.start;
+        const mm = Math.max(0, Math.round(ms/60000));
+        const finalClock = formatClock(ms);
+        sessions.unshift({app:app.id,label:app.label,minutes:mm,date:todayKey,endTs:Date.now()});
+        store.set(K_SESS, sessions);
+        active = null; store.set(K_ACTIVE, active);
+        if (sessionTimer){ clearInterval(sessionTimer); sessionTimer=null; }
+        renderApps();
+        renderActiveSession();
+        renderHistory();
+        updateProgress();
+        sessionClockEl.textContent = finalClock;
+        showToast(`Tracked ${mm}m on ${app.label}`);
+      } else {
+        active = {app:app.id,label:app.label,start:Date.now()};
+        store.set(K_ACTIVE, active);
+        renderApps();
+        renderActiveSession();
+        startTimer();
+        showToast(`Tracking started: ${app.label}`);
+      }
+    }
+
+    function startTimer(){
+      if (sessionTimer){ clearInterval(sessionTimer); }
+      sessionTimer = setInterval(()=>{
+        if (!active) return;
+        sessionClockEl.textContent = formatClock(Date.now()-active.start);
+      }, 1000);
+    }
+
+    function formatClock(ms){
+      const mm = Math.floor(ms/60000);
+      const ss = Math.floor((ms%60000)/1000);
+      return `${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+    }
+
+    function renderActiveSession(){
+      if (active){
+        activeSessionEl.style.display = '';
+        sessionNameEl.textContent = active.label;
+      } else {
+        activeSessionEl.style.display = 'none';
+      }
+    }
+
+    function renderHistory(){
+      const todaySessions = sessions.filter(s=>s.date===todayKey);
+      historyEl.innerHTML = '';
+      if (todaySessions.length===0){
+        const empty = document.createElement('div');
+        empty.className = 'muted';
+        empty.textContent = 'No sessions yet today.';
+        historyEl.appendChild(empty);
+        return;
+      }
+      todaySessions.slice(0,6).forEach(s=>{
+        const time = new Date(s.endTs).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        const it = document.createElement('div');
+        it.className = 'history-item';
+        it.innerHTML = `<div class="left"><span class="chip">${s.label}</span><span class="muted">${time}</span></div><div><strong>${s.minutes}m</strong></div>`;
+        historyEl.appendChild(it);
+      });
+    }
+
+    function minutesToday(){
+      const base = sessions.filter(s=>s.date===todayKey).reduce((sum,s)=>sum+s.minutes,0);
+      if (active){
+        const elapsed = Math.round((Date.now()-active.start)/60000);
+        return base + Math.max(0, elapsed);
+      }
+      return base;
+    }
+
+    function isCooldownActive(){
+      return cooldown.active && Date.now() < cooldown.endTs;
+    }
+
+    function remainingCooldownMin(){
+      if (!isCooldownActive()) return 0;
+      return Math.ceil((cooldown.endTs - Date.now())/60000);
+    }
+
+    function updateCooldownUI(){
+      if (isCooldownActive()){
+        hardBanner.style.display = '';
+        cooldownText.textContent = `Ends in ${remainingCooldownMin()} min`;
+      } else {
+        hardBanner.style.display = 'none';
+        cooldown.active = false;
+        store.set(K_COOLDOWN, cooldown);
+      }
+    }
+
+    function updateProgress(){
+      const used = minutesToday();
+      todayUsageEl.textContent = `${used}m`;
+      goalTextEl.textContent = `${goalMinutes}m`;
+      const pct = Math.min(100, Math.round((used/goalMinutes)*100) || 0);
+      progressPercentEl.textContent = `${pct}%`;
+      progressFill.style.width = `${pct}%`;
+
+      progressFill.className = 'progress-fill';
+      let status = 'Calm and mindful';
+      if (pct < 60){ progressFill.classList.add('good'); status='Balanced'; }
+      else if (pct < 90){ progressFill.classList.add('warn'); status='Approaching limit'; }
+      else { progressFill.classList.add('bad'); status='At your limit'; }
+      progressStatusEl.textContent = status;
+
+      // Gentle reminders + blocker triggers
+      if (notifEnabled){
+        if (pct >= 60 && !milestones['60']){ showToast('60% of goal reached. Keep it mindful.'); milestones['60']=true; }
+        if (pct >= 75 && !milestones['75']){ showToast('75% reached. Consider a short breathing break.'); milestones['75']=true; softBlockSuggest(); }
+        if (pct >= 90 && !milestones['90']){ showToast('90% reached. A cooldown may help.'); milestones['90']=true; }
+        if (pct >= 100 && !milestones['100']){ showToast('You’ve reached today’s limit. Hard block applied.'); milestones['100']=true; startHardBlock(15); }
+        store.set(K_MILE, milestones);
+      }
+
+      updateCooldownUI();
+    }
+
+    function softBlockSuggest(){
+      if (isCooldownActive()) return;
+      softBanner.style.display = '';
+    }
+
+    function startSoftBlock(seconds=60){
+      softBanner.style.display = 'none';
+      openBreathingModal();
+      startModalBreathing();
+      setTimeout(()=>{ stopModalBreathing(); closeBreathingModal(); showToast('Nice reset. You’re back in control.'); }, seconds*1000);
+    }
+
+    function startHardBlock(minutes=15){
+      const min = Math.max(1, minutes);
+      cooldown = {active:true, endTs: Date.now()+min*60000, minutes:min};
+      store.set(K_COOLDOWN, cooldown);
+      updateCooldownUI();
+      // End current session if any
+      if (active){
+        const app = APPS.find(a=>a.id===active.app);
+        if (app){ toggleSession(app); }
+      }
+    }
+
+    // Toast with queue
+    function showToast(msg){
+      toastQueue.push(msg);
+      if (toastQueue.length===1) displayToast();
+    }
+    function displayToast(){
+      if (!toastQueue.length) return;
+      toast.textContent = toastQueue[0];
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(()=>{
+        toast.classList.remove('show');
+        toastQueue.shift();
+        if (toastQueue.length) displayToast();
+      }, 3000);
+    }
+
+    // Notifications switch
+    function setNotif(on){
+      notifEnabled = !!on;
+      notifSwitch.classList.toggle('on', notifEnabled);
+      notifSwitch.setAttribute('aria-checked', String(notifEnabled));
+      store.set(K_NOTIF, notifEnabled);
+    }
+    notifToggle.addEventListener('click', ()=> setNotif(!notifEnabled));
+    notifSwitch.addEventListener('keydown', (e)=>{
+      if (e.key==='Enter' || e.key===' '){ e.preventDefault(); setNotif(!notifEnabled); }
+    });
+
+    // Save goal
+    saveGoalBtn.addEventListener('click', ()=>{
+      const val = parseInt(customGoalInput.value, 10);
+      if (!isNaN(val) && val >= 15){
+        setGoal(val);
+        customGoalInput.value = '';
+      } else {
+        showToast('Enter a valid number ≥ 15');
+      }
+    });
+
+    // Tabs
+    function openTab(name){
+      Object.keys(panels).forEach(k=>{
+        const shown = (k===name);
+        panels[k].hidden = !shown;
+        tabs[k].setAttribute('aria-selected', String(shown));
+      });
+    }
+    tabs.home.addEventListener('click', ()=> openTab('home'));
+    tabs.settings.addEventListener('click', ()=> openTab('settings'));
+    tabs.breathing.addEventListener('click', ()=> openTab('breathing'));
+    tabs.blocker.addEventListener('click', ()=> openTab('blocker'));
+
+    // Breathing
+    const phases = ['Inhale','Hold','Exhale'];
+    let modalInterval = null;
+    let inlineInterval = null;
+    function startCycle(setCue){
+      let i = 0; setCue(phases[i]);
+      return setInterval(()=>{ i = (i+1)%phases.length; setCue(phases[i]); }, 4000);
+    }
+    function stopCycle(interval, setCue){ clearInterval(interval); setCue('Inhale'); }
+
+    function openBreathingModal(){
+      breathModal.classList.add('active');
+      breathModal.setAttribute('aria-hidden','false');
+    }
+    function closeBreathingModal(){
+      breathModal.classList.remove('active');
+      breathModal.setAttribute('aria-hidden','true');
+    }
+    function startModalBreathing(){
+      modalCircle.classList.add('animate');
+      modalInterval = startCycle(c=> modalCue.textContent = c);
+      modalStart.disabled = true; modalStop.disabled = false;
+    }
+    function stopModalBreathing(){
+      modalCircle.classList.remove('animate');
+      stopCycle(modalInterval, c=> modalCue.textContent = c);
+      modalStart.disabled = false; modalStop.disabled = true;
+      modalInterval = null;
+    }
+    function startInlineBreathing(){
+      inlineCircle.classList.add('animate');
+      inlineInterval = startCycle(c=> inlineCue.textContent = c);
+      startInlineBreathingBtn.disabled = true; stopInlineBreathingBtn.disabled = false;
+    }
+    function stopInlineBreathing(){
+      inlineCircle.classList.remove('animate');
+      stopCycle(inlineInterval, c=> inlineCue.textContent = c);
+      startInlineBreathingBtn.disabled = false; stopInlineBreathingBtn.disabled = true;
+      inlineInterval = null;
+    }
+
+    document.getElementById('inlineBreathing').addEventListener('click', openBreathingModal);
+    openBreathing.addEventListener('click', openBreathingModal);
+    openBreathing2.addEventListener('click', openBreathingModal);
+    closeBreathing.addEventListener('click', ()=>{
+      if (modalInterval) stopModalBreathing();
+      closeBreathingModal();
+    });
+    modalStart.addEventListener('click', startModalBreathing);
+    modalStop.addEventListener('click', stopModalBreathing);
+    startInlineBreathingBtn.addEventListener('click', startInlineBreathing);
+    stopInlineBreathingBtn.addEventListener('click', stopInlineBreathing);
+
+    // Soft block controls
+    softStart.addEventListener('click', ()=> startSoftBlock(60));
+    triggerSoftBtn.addEventListener('click', ()=> softBlockSuggest());
+    triggerHardBtn.addEventListener('click', ()=> startHardBlock(15));
+
+    // Override flow
+    requestOverrideBtn.addEventListener('click', ()=>{
+      overrideModal.classList.add('active');
+      overrideModal.setAttribute('aria-hidden','false');
+    });
+    closeOverrideBtn.addEventListener('click', ()=>{
+      overrideModal.classList.remove('active');
+      overrideModal.setAttribute('aria-hidden','true');
+    });
+    submitOverrideBtn.addEventListener('click', ()=>{
+      const reason = (overrideReasonInput.value || '').trim();
+      if (!reason){ showToast('Please provide a reason.'); return; }
+      // Simple verification mock: approve and time-box 15 mins
+      const entry = {reason, ts:Date.now(), minutes:15};
+      overrides.unshift(entry);
+      store.set(K_OVERRIDES, overrides);
+      overrideReasonInput.value = '';
+      overrideModal.classList.remove('active');
+      overrideModal.setAttribute('aria-hidden','true');
+      // Temporarily disable cooldown for the approved window
+      cooldown = {active:false, endTs:0, minutes:0};
+      store.set(K_COOLDOWN, cooldown);
+      showToast('Override approved for 15 minutes.');
+    });
+
+    // Feedback
+    fbHelpful.addEventListener('click', ()=> showToast('Thanks. We’ll keep breaks gentle.'));
+    fbNotHelpful.addEventListener('click', ()=> showToast('Noted. We’ll adjust intensity.'));
+
+    // Daily reset
+    function ensureDay(){
+      const last = store.get('homa_last_day', todayKey);
+      if (last !== todayKey){
+        store.set('homa_last_day', todayKey);
+        milestones = {'60':false,'75':false,'90':false,'100':false};
+        store.set(K_MILE, milestones);
+      }
+    }
+    ensureDay();
+    setInterval(ensureDay, 60000);
+
+    // Bootstrap
+    renderPresets();
+    renderApps();
+    renderActiveSession();
+    renderHistory();
+    setNotif(notifEnabled);
+    updateProgress();
+    setInterval(()=>{ updateProgress(); }, 10_000);
+    setInterval(()=>{ updateCooldownUI(); }, 15_000);
+
+    // Accessibility: close modals with ESC
+    document.addEventListener('keydown', (e)=>{
+      if (e.key==='Escape' && breathModal.classList.contains('active')) closeBreathingModal();
+      if (e.key==='Escape' && overrideModal.classList.contains('active')) {
+        overrideModal.classList.remove('active');
+        overrideModal.setAttribute('aria-hidden','true');
+      }
+    });
+  </script>
+</body>
+</html>
+```
